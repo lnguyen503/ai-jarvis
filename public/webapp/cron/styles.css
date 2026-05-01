@@ -1,0 +1,563 @@
+/* Cron builder — Jarvis v1.17.0
+ *
+ * Extends the theme-variable pattern from public/webapp/styles.css.
+ * Uses Telegram theme CSS variables with fallbacks for dev preview.
+ */
+
+:root {
+  --bg-color: var(--tg-theme-bg-color, #ffffff);
+  --text-color: var(--tg-theme-text-color, #000000);
+  --hint-color: var(--tg-theme-hint-color, #999999);
+  --button-bg: var(--tg-theme-button-color, #5288c1);
+  --button-text: var(--tg-theme-button-text-color, #ffffff);
+  --secondary-bg: var(--tg-theme-secondary-bg-color, #f4f4f5);
+  --danger-color: #d32f2f;
+  --success-color: #388e3c;
+  --warning-color: #f57c00;
+  --card-border: rgba(0, 0, 0, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------------
+   Header
+------------------------------------------------------------------ */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--secondary-bg);
+  border-bottom: 1px solid var(--card-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.back-link {
+  color: var(--button-bg);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+/* ------------------------------------------------------------------
+   Status states
+------------------------------------------------------------------ */
+.status {
+  padding: 1rem;
+  color: var(--hint-color);
+  font-style: italic;
+  text-align: center;
+}
+
+.status.error {
+  color: var(--danger-color);
+  font-style: normal;
+}
+
+/* ------------------------------------------------------------------
+   List view
+------------------------------------------------------------------ */
+#list-view {
+  padding: 1rem;
+}
+
+.list-actions {
+  margin-bottom: 1rem;
+}
+
+#task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.task-item {
+  background: var(--secondary-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.task-desc {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.task-expr {
+  font-family: "SF Mono", Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.task-action {
+  font-size: 0.88rem;
+  color: var(--hint-color);
+}
+
+.task-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* ------------------------------------------------------------------
+   Badges
+------------------------------------------------------------------ */
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge-active {
+  background: rgba(56, 142, 60, 0.15);
+  color: var(--success-color);
+}
+
+.badge-paused {
+  background: rgba(245, 124, 0, 0.15);
+  color: var(--warning-color);
+}
+
+/* ------------------------------------------------------------------
+   Buttons
+------------------------------------------------------------------ */
+button {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  transition: background 0.12s, opacity 0.12s;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#new-task-btn, #form-submit {
+  background: var(--button-bg);
+  color: var(--button-text);
+  font-weight: 600;
+}
+
+#new-task-btn:hover, #form-submit:hover { opacity: 0.88; }
+
+#form-cancel, #list-retry {
+  background: var(--secondary-bg);
+  color: var(--text-color);
+  border: 1px solid var(--card-border);
+}
+
+.btn-edit {
+  background: var(--secondary-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-color);
+  font-size: 0.82rem;
+  padding: 0.3rem 0.75rem;
+}
+
+.btn-delete {
+  background: transparent;
+  border: 1px solid var(--card-border);
+  color: var(--danger-color);
+  font-size: 0.82rem;
+  padding: 0.3rem 0.75rem;
+}
+
+.btn-delete.confirming {
+  background: var(--danger-color);
+  color: #fff;
+}
+
+/* ------------------------------------------------------------------
+   Task form
+------------------------------------------------------------------ */
+#task-form {
+  padding: 1rem;
+  max-width: 600px;
+}
+
+#task-form h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.field {
+  margin-bottom: 1rem;
+}
+
+.field label {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--hint-color);
+  margin-bottom: 0.35rem;
+}
+
+.field input[type="text"] {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: var(--secondary-bg);
+  color: var(--text-color);
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.field-toggle label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------------
+   Preset buttons
+------------------------------------------------------------------ */
+#preset-fieldset {
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+#preset-fieldset legend {
+  font-size: 0.85rem;
+  color: var(--hint-color);
+  padding: 0 0.25rem;
+}
+
+#preset-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.preset-btn {
+  background: var(--secondary-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-color);
+  font-size: 0.82rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+}
+
+.preset-btn.active {
+  background: var(--button-bg);
+  color: var(--button-text);
+  border-color: var(--button-bg);
+}
+
+.param-group {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.param-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-color);
+}
+
+.param-group select {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+/* ------------------------------------------------------------------
+   Preview block
+------------------------------------------------------------------ */
+.preview-block {
+  background: var(--secondary-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.preview-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  color: var(--hint-color);
+  font-weight: 600;
+}
+
+.preview-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: "SF Mono", Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+}
+
+.preview-list li {
+  padding: 0.15rem 0;
+}
+
+.preview-warning {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: var(--warning-color);
+}
+
+.preview-error {
+  font-size: 0.85rem;
+  color: var(--danger-color);
+  margin-bottom: 1rem;
+}
+
+/* ------------------------------------------------------------------
+   Form actions
+------------------------------------------------------------------ */
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.form-error {
+  color: var(--danger-color);
+  font-size: 0.88rem;
+  margin-top: 0.5rem;
+}
+
+/* ------------------------------------------------------------------
+   Toast
+------------------------------------------------------------------ */
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  padding: 0.65rem 1.25rem;
+  border-radius: 20px;
+  font-size: 0.88rem;
+  max-width: 90vw;
+  text-align: center;
+  z-index: 100;
+  transition: opacity 0.4s;
+}
+
+.toast.fade-out {
+  opacity: 0;
+}
+
+/* ------------------------------------------------------------------
+   Coach Jarvis section (v1.18.0 ADR 018)
+------------------------------------------------------------------ */
+.coach-section {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: var(--secondary-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+}
+
+.coach-section-title {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.coach-status {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--hint-color);
+}
+
+.coach-setup-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.coach-time-label {
+  font-size: 0.85rem;
+  color: var(--hint-color);
+}
+
+.coach-time-input {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.coach-setup-btn {
+  background: var(--button-bg);
+  color: var(--button-text);
+  font-weight: 600;
+  font-size: 0.88rem;
+  padding: 0.45rem 0.9rem;
+}
+
+.coach-setup-btn:hover { opacity: 0.88; }
+
+.coach-setup-error {
+  color: var(--danger-color);
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.coach-reset-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.coach-reset-btn {
+  background: transparent;
+  border: 1px solid var(--danger-color);
+  color: var(--danger-color);
+  font-size: 0.85rem;
+  padding: 0.35rem 0.75rem;
+}
+
+.coach-reset-btn.confirming {
+  background: var(--danger-color);
+  color: #fff;
+}
+
+.coach-reset-hint {
+  font-size: 0.82rem;
+  color: var(--hint-color);
+}
+
+/* Coach badge in task list */
+.badge-coach {
+  background: rgba(82, 136, 193, 0.15);
+  color: var(--button-bg);
+  margin-bottom: 0.25rem;
+}
+
+/* v1.20.0 D18: profile-specific coach badge (same color family, distinct style) */
+.badge-coach-profile {
+  background: rgba(82, 136, 193, 0.2);
+  color: var(--button-bg);
+  border: 1px solid rgba(82, 136, 193, 0.35);
+}
+
+.task-item-coach {
+  border-left: 3px solid var(--button-bg);
+}
+
+/* ------------------------------------------------------------------
+   v1.20.0 ADR 020 D18 — Multi-profile coach setup
+------------------------------------------------------------------ */
+
+.coach-multi-profile-setup {
+  margin-bottom: 0.75rem;
+}
+
+.coach-multi-profile-label {
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+  color: var(--hint-color);
+}
+
+/* Profile picker (Morning / Midday / Evening / Weekly) */
+.coach-profile-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.coach-profile-btn {
+  background: var(--secondary-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-color);
+  font-size: 0.82rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+}
+
+.coach-profile-btn.active {
+  background: var(--button-bg);
+  color: var(--button-text);
+  border-color: var(--button-bg);
+}
+
+/* Weekday picker (Mon-Sun, visible only for Weekly profile) */
+.coach-weekday-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.6rem;
+}
+
+.coach-weekday-btn {
+  background: var(--secondary-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-color);
+  font-size: 0.78rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 16px;
+  min-width: 2.4rem;
+  text-align: center;
+}
+
+.coach-weekday-btn.active {
+  background: var(--button-bg);
+  color: var(--button-text);
+  border-color: var(--button-bg);
+}
+
+/* Profile fields row (time input) */
+.coach-profile-fields {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}

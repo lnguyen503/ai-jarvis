@@ -1,0 +1,27 @@
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+*.db
+*.db-journal
+# Per-bot data isolation — ignore the entire data/ tree at any depth.
+# Runtime data (DBs, OAuth tokens, per-user memory + organize items, logs)
+# lives at data/<botName>/... and must never be committed.
+data/
+# Local config — copy from config.example.json and fill in your secrets.
+# Contains personal user/group IDs and public URLs; do NOT commit.
+config/config.json
+# /plan, /research, /fix, /build runtime artifacts (per-chat, regenerated)
+workspaces/
+logs/
+*.log
+.vscode/
+.idea/
+.claude/
+.DS_Store
+Thumbs.db
+coverage/
+.nyc_output/
+*.tsbuildinfo

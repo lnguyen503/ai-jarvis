@@ -1,0 +1,265 @@
+/* Jarvis Web App hub — v1.14.0
+ *
+ * Uses Telegram theme CSS variables (--tg-theme-*) injected by the SDK,
+ * with fallbacks for non-Telegram environments (browser dev preview).
+ * Dynamic values set at runtime in app.js via document.documentElement.style
+ * using the --bg-color / --text-color etc. aliases below.
+ *
+ * v1.14.0: ping-result + unauth-message button styles removed;
+ *          .features + .feature-btn hub layout added.
+ */
+
+:root {
+  --bg-color: var(--tg-theme-bg-color, #ffffff);
+  --text-color: var(--tg-theme-text-color, #000000);
+  --hint-color: var(--tg-theme-hint-color, #999999);
+  --button-bg: var(--tg-theme-button-color, #5288c1);
+  --button-text: var(--tg-theme-button-text-color, #ffffff);
+  --secondary-bg: var(--tg-theme-secondary-bg-color, #f4f4f5);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Ensure the [hidden] HTML attribute always wins over author display rules.
+   Without !important, class/ID rules like `.features { display: flex }`
+   override the UA `hidden { display: none }` due to specificity. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  padding: 1rem;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+main {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+h1 {
+  margin-top: 0;
+}
+
+#user-info {
+  margin: 0.5rem 0 1rem;
+  font-size: 0.88rem;
+  color: var(--hint-color);
+}
+
+#user-info p {
+  margin: 0;
+}
+
+#status {
+  color: var(--hint-color);
+  font-style: italic;
+  font-size: 0.9rem;
+  min-height: 1.4em;
+}
+
+/* ------------------------------------------------------------------
+   Feature picker grid (hub)
+   R7 (ADR 017 CP1): flex-wrap + 140px min-width tiles for 5-tile responsive layout.
+   At 320px viewport: 2 tiles per row (140+gap+140=296px); 5 tiles → 3 rows (2+2+1).
+   At 768px+: 5 tiles per row.
+------------------------------------------------------------------ */
+.features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.feature-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  background: var(--secondary-bg);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--text-color);
+  transition: background 0.12s;
+  min-width: 140px;
+  flex: 1 1 140px;
+}
+
+.feature-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.feature-btn:active {
+  background: rgba(0, 0, 0, 0.09);
+}
+
+.feature-icon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+  width: 2rem;
+  text-align: center;
+}
+
+.feature-label {
+  font-weight: 700;
+  font-size: 1rem;
+  display: block;
+}
+
+.feature-desc {
+  font-size: 0.82rem;
+  color: var(--hint-color);
+  display: block;
+}
+
+/* ------------------------------------------------------------------
+   Unauth message
+------------------------------------------------------------------ */
+#unauth-message {
+  color: var(--hint-color);
+  font-style: italic;
+  margin-top: 1rem;
+}
+
+code {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ------------------------------------------------------------------
+   v1.20.0 D20 — "Coach is on" hub banner (commit 15)
+   Extended from v1.19.0 D17: <details> expandable panel, per-profile
+   schedule list, heavy-hammer "Disable everything" two-tap button.
+------------------------------------------------------------------ */
+
+/* <details> element replaces the old <div> — removes default marker */
+.coach-banner {
+  background: rgba(82, 136, 193, 0.12);
+  border: 1px solid rgba(82, 136, 193, 0.3);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  list-style: none; /* suppress <details> default in some browsers */
+}
+
+.coach-banner > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  list-style: none; /* Chrome / Firefox */
+}
+
+/* Hide default <details> triangle marker */
+.coach-banner > summary::-webkit-details-marker { display: none; }
+.coach-banner > summary::marker { display: none; }
+
+.coach-banner-summary {
+  /* inherits flex from summary above */
+}
+
+.coach-banner-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.coach-banner-text {
+  flex: 1;
+  font-size: 0.88rem;
+  color: var(--text-color);
+}
+
+.coach-banner-quiet {
+  font-size: 0.8rem;
+  color: var(--hint-color);
+}
+
+.coach-banner-dismiss {
+  font-size: 0.82rem;
+  background: transparent;
+  border: 1px solid var(--button-bg);
+  color: var(--button-bg);
+  border-radius: 6px;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.coach-banner-dismiss:hover {
+  background: rgba(82, 136, 193, 0.12);
+}
+
+/* Expanded panel */
+.coach-banner-panel {
+  padding: 0 1rem 0.75rem 1rem;
+  border-top: 1px solid rgba(82, 136, 193, 0.2);
+  margin-top: 0.25rem;
+}
+
+.coach-banner-profile-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+}
+
+.coach-banner-profile-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+  font-size: 0.85rem;
+  color: var(--text-color);
+}
+
+.coach-banner-profile-name {
+  font-weight: 500;
+}
+
+.coach-banner-profile-sched {
+  color: var(--hint-color);
+  font-size: 0.82rem;
+}
+
+/* Heavy-hammer section */
+.coach-banner-heavy-hammer {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.coach-banner-disable-all,
+.coach-banner-disable-confirm {
+  font-size: 0.82rem;
+  background: transparent;
+  border: 1px solid #c0392b;
+  color: #c0392b;
+  border-radius: 6px;
+  padding: 0.3rem 0.75rem;
+  cursor: pointer;
+}
+
+.coach-banner-disable-all:hover,
+.coach-banner-disable-confirm:hover {
+  background: rgba(192, 57, 43, 0.1);
+}
+
+/* ------------------------------------------------------------------
+   v1.21.0 ADR 021 Pillar 4 — bot name badge in hub <h1>
+   Small, subdued, parenthetical. Renders as "(ai-tony)" beside greeting.
+   hidden attribute keeps it invisible until identity fetch resolves.
+------------------------------------------------------------------ */
+.bot-name-badge {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--hint-color);
+  vertical-align: middle;
+  letter-spacing: 0.01em;
+}

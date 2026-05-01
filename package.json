@@ -1,0 +1,59 @@
+{
+  "name": "jarvis",
+  "version": "1.23.0",
+  "description": "Personal AI agent gateway — Telegram-fronted Claude agent for Windows",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc && node -e \"import('node:fs').then(fs=>{fs.mkdirSync('dist/memory/migrations',{recursive:true});for(const f of fs.readdirSync('src/memory/migrations'))if(f.endsWith('.sql'))fs.copyFileSync('src/memory/migrations/'+f,'dist/memory/migrations/'+f);fs.mkdirSync('dist/coach',{recursive:true});if(fs.existsSync('src/coach/coachPrompt.md'))fs.copyFileSync('src/coach/coachPrompt.md','dist/coach/coachPrompt.md')})\"",
+    "start": "node dist/index.js",
+    "dev": "ts-node --esm src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts",
+    "google-auth": "tsx scripts/google-auth.ts",
+    "lint": "eslint src tests --ext .ts",
+    "lint:fix": "eslint src tests --ext .ts --fix",
+    "start:avengers": "pm2 start ecosystem.config.cjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@mozilla/readability": "^0.6.0",
+    "docx": "^9.6.1",
+    "dotenv": "^16.4.5",
+    "execa": "^9.3.0",
+    "express": "^4.19.2",
+    "googleapis": "^171.4.0",
+    "grammy": "^1.31.0",
+    "jsdom": "^29.0.2",
+    "minimatch": "^10.0.1",
+    "node-cron": "^3.0.3",
+    "pino": "^9.2.0",
+    "pino-roll": "^1.0.0",
+    "playwright": "^1.59.1",
+    "tree-kill": "^1.2.2",
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.23.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jsdom": "^28.0.1",
+    "@types/node": "^20.14.0",
+    "@types/node-cron": "^3.0.11",
+    "@typescript-eslint/eslint-plugin": "^7.13.0",
+    "@typescript-eslint/parser": "^7.13.0",
+    "@vitest/coverage-v8": "^4.1.4",
+    "eslint": "^8.57.0",
+    "pino-pretty": "^11.2.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.5.2",
+    "vitest": "^4.1.4"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^11.8.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,94 @@
+<!doctype html>
+<!--
+  Audit log — Jarvis v1.17.0
+
+  CSP note: NO inline JS is permitted. All script logic lives in app.js.
+  Auth note: Authorization: tma <initData> header only.
+
+  Read-only — no edit/delete UI elements.
+  R4 binding: Refresh button clears cursor + fetches latest rows.
+  R6 binding: client validates category filter against server-returned KNOWN_AUDIT_CATEGORIES.
+  R9 binding: detail_json formatted via JSON.stringify(parsed, null, 2); truncated at 16KB;
+              rendered via pre.textContent ONLY — never innerHTML.
+
+  v1.17.0: audit log webapp at /webapp/audit/ (ADR 017 D4).
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Audit — Jarvis</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script type="module" src="./app.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>📜 Audit</h1>
+    <a href="../" class="back-link">← Back to hub</a>
+  </header>
+
+  <!-- List view -->
+  <section id="list-view">
+    <!-- Filters -->
+    <div id="filters" class="filters">
+      <!-- R4: Refresh button at top -->
+      <button id="refresh-btn" type="button" class="btn-refresh">↻ Refresh</button>
+
+      <div class="filter-row">
+        <label for="category-filter">Category</label>
+        <select id="category-filter" multiple>
+          <option value="">All categories</option>
+          <!-- Populated dynamically from server-returned KNOWN_AUDIT_CATEGORIES (R6) -->
+        </select>
+      </div>
+
+      <div class="filter-row">
+        <label for="range-filter">Time range</label>
+        <select id="range-filter">
+          <option value="last_hour">Last hour</option>
+          <option value="last_day" selected>Last day</option>
+          <option value="last_week">Last week</option>
+          <option value="last_month">Last month</option>
+          <option value="custom">Custom range</option>
+        </select>
+      </div>
+
+      <div id="custom-range" hidden class="custom-range">
+        <label>From <input type="datetime-local" id="range-from"></label>
+        <label>To <input type="datetime-local" id="range-to"></label>
+      </div>
+
+      <button id="apply-filters" type="button">Apply filters</button>
+    </div>
+
+    <div id="list-loading" class="status">Loading…</div>
+    <ul id="audit-list" hidden aria-label="Audit log entries"></ul>
+    <p id="list-empty" class="status" hidden>No audit events found.</p>
+    <p id="list-error" class="status error" hidden></p>
+    <button id="list-retry" type="button" hidden>Retry</button>
+
+    <!-- Load more (cursor-based pagination) -->
+    <div id="pagination" hidden class="pagination">
+      <button id="load-more-btn" type="button">Load older events</button>
+    </div>
+  </section>
+
+  <!-- Detail view (hidden until a row is tapped) -->
+  <section id="detail-view" hidden aria-label="Audit event detail">
+    <div class="detail-header">
+      <button id="detail-back" type="button">← Back</button>
+    </div>
+    <div class="detail-meta">
+      <span id="detail-category" class="badge"></span>
+      <span id="detail-ts" class="detail-ts"></span>
+    </div>
+    <p id="detail-actor" class="detail-actor"></p>
+    <pre id="detail-json" class="detail-json"></pre>
+    <!-- Read-only: no edit/delete buttons per ADR 017 D4 -->
+  </section>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+</body>
+</html>

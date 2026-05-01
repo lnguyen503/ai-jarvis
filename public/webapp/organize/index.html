@@ -1,0 +1,281 @@
+<!doctype html>
+<!--
+  Organize page — Jarvis v1.15.0
+
+  CSP note: NO inline JS is permitted. All script logic lives in the sibling
+  app.js. The Telegram WebApp SDK is loaded from the official CDN (telegram.org)
+  which is explicitly allowed by the server's CSP script-src directive.
+
+  Auth note: the page uses Authorization: tma <initData> header only.
+  The ?initData= query-string fallback is intentionally absent.
+
+  Back-link: the <a href="../"> link returns to the hub without closing the
+  webview — per ADR 009 R12.2, this is intentional. The Telegram BackButton
+  (wired in app.js for the detail panel) is the in-app nav affordance.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Organize — Jarvis</title>
+  <link rel="stylesheet" href="./styles.css">
+  <!-- Telegram WebApp SDK from official CDN — allowed by CSP script-src -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script type="module" src="./app.js" defer></script>
+  <!-- v1.15.0 view modules (loaded as ES modules via app.js imports; listed here for clarity) -->
+</head>
+<body>
+  <header>
+    <h1>📋 Organize</h1>
+    <!--
+      Back link — not a button, intentionally. A <button> that called
+      window.history.back() or twa.close() would close the entire webview,
+      ejecting the user to Telegram. This <a> navigates to the hub page
+      within the same webview. See ADR 009 R12.2.
+    -->
+    <a href="../" class="back-link">← Back to hub</a>
+    <!-- v1.15.0 — view switcher (D7; R7 strict-equal whitelist in app.js) -->
+    <nav class="view-switcher" aria-label="View">
+      <button type="button" id="view-list" class="view-btn active" aria-label="List view">List</button>
+      <button type="button" id="view-kanban" class="view-btn" aria-label="Kanban view">Kanban</button>
+      <button type="button" id="view-calendar" class="view-btn" aria-label="Calendar view">Calendar</button>
+    </nav>
+    <!-- v1.14.6 — multi-select + create form header buttons (R9 mutual exclusion) -->
+    <button type="button" id="select-toggle">Select</button>
+    <button type="button" id="new-item-btn">+ New</button>
+  </header>
+
+  <!-- v1.14.6 — bulk action bar (ADR 014 D10/D12; initially hidden) -->
+  <section id="select-bar" hidden role="toolbar" aria-label="Bulk actions">
+    <span><span id="select-count">0</span> selected</span>
+    <button type="button" id="bulk-complete">Complete</button>
+    <button type="button" id="bulk-delete">Delete</button>
+    <button type="button" id="bulk-reparent">Move to goal…</button>
+    <button type="button" id="bulk-cancel">Cancel</button>
+  </section>
+
+  <!-- v1.14.6 — typed-confirm dialog for >50 bulk delete (R2 HIGH; ADR 014-revisions R2) -->
+  <div id="bulk-delete-typed-confirm" hidden>
+    <p>You are about to delete <span id="bulk-delete-count"></span> items. Type <strong>DELETE</strong> to confirm:</p>
+    <input type="text" id="bulk-delete-typed-input" autocomplete="off" placeholder="DELETE">
+    <button type="button" id="bulk-delete-typed-confirm-btn">Confirm delete</button>
+    <button type="button" id="bulk-delete-typed-cancel-btn">Cancel</button>
+  </div>
+
+  <!-- v1.14.6 — inline create form (ADR 014 D13/D14; R9 mutual exclusion with select mode) -->
+  <form id="create-form" hidden>
+    <fieldset>
+      <legend>Type</legend>
+      <button type="button" data-create-type="task" class="status-pill active">📌 Task</button>
+      <button type="button" data-create-type="event" class="status-pill">📅 Event</button>
+      <button type="button" data-create-type="goal" class="status-pill">⚑ Goal</button>
+    </fieldset>
+    <label for="create-title">Title <span id="create-title-counter" class="char-counter">0 / 500</span></label>
+    <input type="text" id="create-title" maxlength="500" required>
+    <label for="create-due">Due</label>
+    <input type="date" id="create-due">
+    <label for="create-tags">Tags (comma-separated)</label>
+    <input type="text" id="create-tags" placeholder="tag1, tag2">
+    <label for="create-parent" id="create-parent-label">Parent goal</label>
+    <select id="create-parent">
+      <option value="">(none)</option>
+    </select>
+    <label for="create-notes">Notes <span id="create-notes-counter" class="char-counter">0 / 10240</span></label>
+    <textarea id="create-notes" maxlength="10240" rows="6"
+              autocorrect="off" autocapitalize="sentences" spellcheck="true"></textarea>
+    <label for="create-progress">Progress <span id="create-progress-counter" class="char-counter">0 / 20480</span></label>
+    <textarea id="create-progress" maxlength="20480" rows="8"
+              autocorrect="off" autocapitalize="sentences" spellcheck="true"></textarea>
+    <div class="edit-actions">
+      <button type="button" id="create-cancel">Cancel</button>
+      <button type="submit" id="create-submit">Create</button>
+    </div>
+    <p id="create-error" class="error-msg" hidden></p>
+  </form>
+
+  <nav class="filters">
+    <fieldset>
+      <legend>Type</legend>
+      <button type="button" data-filter-type="all" class="chip active">All</button>
+      <button type="button" data-filter-type="task" class="chip">📌 Tasks</button>
+      <button type="button" data-filter-type="event" class="chip">📅 Events</button>
+      <button type="button" data-filter-type="goal" class="chip">⚑ Goals</button>
+    </fieldset>
+    <fieldset>
+      <legend>Status</legend>
+      <button type="button" data-filter-status="active" class="chip active">Active</button>
+      <button type="button" data-filter-status="done" class="chip">Done</button>
+      <button type="button" data-filter-status="all" class="chip">All</button>
+    </fieldset>
+    <!-- v1.18.0 ADR 018 D1 — coached-only client-side filter -->
+    <fieldset>
+      <legend>Coach</legend>
+      <button type="button" id="filter-coached" class="chip coach-filter-chip">🤖 Coached only</button>
+    </fieldset>
+  </nav>
+
+  <main id="main">
+    <div id="loading" class="status">Loading…</div>
+    <ul id="item-list" hidden></ul>
+    <!--
+      Empty state: non-clickable text by design. A link/button here would
+      attempt to open the Telegram chat, which may close or re-focus the
+      webview unpredictably. Directing users to the Telegram chat via plain
+      text is the safest affordance. ADR 009 R12.2.
+    -->
+    <!-- v1.19.0 D5 — empty-state polish (commit 15) -->
+    <div id="empty-state" class="empty-state-graphic" hidden>
+      <span class="empty-state-icon" aria-hidden="true">📋</span>
+      <p class="empty-state-message">No items match.</p>
+      <p class="empty-state-message">Tap <strong>+ New</strong> above to create one, or use Telegram chat: "add a task: …"</p>
+    </div>
+    <p id="error-state" class="status" hidden></p>
+    <button id="retry-btn" type="button" hidden>Retry</button>
+  </main>
+
+  <section id="detail-panel" hidden>
+    <button id="detail-back" type="button">← Back</button>
+    <div class="detail-header-row">
+      <h2 id="detail-title"></h2>
+      <button id="edit-btn" type="button">✏️ Edit</button>
+    </div>
+    <div id="detail-meta"></div>
+
+    <form id="edit-form" hidden>
+      <label for="edit-title">Title</label>
+      <input type="text" id="edit-title" maxlength="500" required>
+      <label for="edit-due">Due</label>
+      <input type="date" id="edit-due">
+      <fieldset>
+        <legend>Status</legend>
+        <button type="button" data-status="active" class="status-pill">Active</button>
+        <button type="button" data-status="done" class="status-pill">Done</button>
+        <button type="button" data-status="abandoned" class="status-pill">Abandoned</button>
+      </fieldset>
+      <label for="edit-parent">Parent goal</label>
+      <select id="edit-parent">
+        <option value="">(none)</option>
+      </select>
+      <label for="edit-tags">Tags (comma-separated)</label>
+      <input type="text" id="edit-tags" placeholder="tag1, tag2">
+      <!-- v1.18.0 ADR 018 D1 — Coaching subsection -->
+      <!-- v1.19.0 D16 — pill picker wrapped in Advanced disclosure (commit 16) -->
+      <fieldset id="edit-coach-section">
+        <legend>Coaching</legend>
+        <!-- Intensity badge always visible (D16: badge stays outside disclosure) -->
+        <span id="edit-coach-intensity-badge" class="coach-badge" aria-live="polite"></span>
+        <details class="coach-advanced" id="edit-coach-advanced">
+          <summary class="coach-advanced-summary" aria-label="Advanced manual intensity settings">Advanced — manual intensity</summary>
+          <div class="coach-pill-picker" id="edit-coach-intensity" role="group" aria-label="Coach intensity">
+            <button type="button" class="coach-pill" data-intensity="auto">✨ Auto</button>
+            <button type="button" class="coach-pill" data-intensity="off">💤 Off</button>
+            <button type="button" class="coach-pill" data-intensity="gentle">🌱 Gentle</button>
+            <button type="button" class="coach-pill" data-intensity="moderate">⏰ Moderate</button>
+            <button type="button" class="coach-pill" data-intensity="persistent">🔥 Persistent</button>
+          </div>
+        </details>
+        <p id="edit-coach-nudge-info" class="form-hint coach-nudge-info"></p>
+      </fieldset>
+      <label for="edit-notes">Notes <span id="notes-counter" class="char-counter">0 / 10240</span></label>
+      <textarea id="edit-notes" maxlength="10240" rows="10"
+                autocorrect="off" autocapitalize="sentences" spellcheck="true"></textarea>
+      <!-- v1.16.0 P12 — inline help: notes/progress support Markdown (rendered in detail view) -->
+      <p class="form-hint">Notes use Markdown formatting (rendered in detail view).</p>
+      <label for="edit-progress">Progress <span id="progress-counter" class="char-counter">0 / 20480</span></label>
+      <textarea id="edit-progress" maxlength="20480" rows="15"
+                autocorrect="off" autocapitalize="sentences" spellcheck="true"></textarea>
+      <p class="form-hint">Notes use Markdown formatting (rendered in detail view).</p>
+      <div class="edit-actions">
+        <button type="button" id="edit-cancel">Cancel</button>
+        <button type="submit" id="edit-save" disabled>Save</button>
+      </div>
+      <p id="edit-error" class="error-msg" hidden></p>
+      <div id="edit-spinner" hidden>Saving…</div>
+    </form>
+
+    <h3>Notes</h3>
+    <!-- v1.16.0 D15: replaced <pre> with <div class="markdown-content"> for Markdown rendering -->
+    <div id="detail-notes" class="markdown-content"></div>
+    <h3>Progress</h3>
+    <div id="detail-progress" class="markdown-content"></div>
+
+    <button id="delete-btn" type="button" class="delete-btn">🗑 Delete</button>
+
+    <!-- v1.14.4 — inline conflict panel (ADR 012 D5/D12/R9; no native dialog per CSP) -->
+    <section id="conflict-panel" hidden role="alertdialog" aria-live="polite">
+      <h3 id="conflict-title">Conflict</h3>
+      <p id="conflict-message"></p>
+      <div class="conflict-actions">
+        <button type="button" id="conflict-reload" hidden>Reload</button>
+        <button type="button" id="conflict-save-anyway" hidden>Save anyway</button>
+        <button type="button" id="conflict-delete-anyway" hidden>Delete anyway</button>
+        <button type="button" id="conflict-cancel">Cancel</button>
+      </div>
+    </section>
+  </section>
+
+  <!-- v1.16.0 D8 P17 — 3-way diff overlay modal (top overlay; position: fixed; z-index: 1000) -->
+  <!-- Hidden by default; shown by edit-form.js when a 412 conflict fires on notes/progress. -->
+  <div id="diff-overlay" class="diff-overlay" hidden role="dialog" aria-modal="true" aria-label="Merge conflict">
+    <div class="diff-overlay-panel">
+      <div id="diff-overlay-content">
+        <!-- Populated dynamically by edit-form.js renderDiffPanel() -->
+      </div>
+      <!-- Manual merge textarea (shown when user taps "Save Manually-Merged") -->
+      <div id="diff-merge-area" hidden>
+        <label for="diff-merge-textarea">Edit merged content:</label>
+        <textarea id="diff-merge-textarea" rows="12"
+                  autocorrect="off" autocapitalize="sentences" spellcheck="true"></textarea>
+        <div class="diff-merge-actions">
+          <button type="button" id="diff-merge-cancel">Cancel</button>
+          <button type="button" id="diff-merge-save">Save merged</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container — body-level, accessible live region (R16) -->
+  <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+
+  <!-- v1.14.5 — BroadcastChannel stale-item banner (ADR 013 D8; W1 DOM contract) -->
+  <div id="bc-banner" hidden role="status" aria-live="polite">
+    <p class="bc-message"></p>
+    <div class="bc-actions">
+      <button type="button" id="bc-reload" data-bc-reload>Reload</button>
+      <button type="button" id="bc-dismiss" data-bc-dismiss>Dismiss</button>
+    </div>
+  </div>
+
+  <!-- v1.15.0 — Kanban view container (ADR 015 D4; D1 tap-pick-tap-drop) -->
+  <section id="kanban-view" hidden aria-label="Kanban board">
+    <!-- kanban-view.js populates this container dynamically -->
+  </section>
+
+  <!-- v1.15.0 — Calendar view container (ADR 015 D5; D3 calendar-date semantics) -->
+  <section id="calendar-view" hidden aria-label="Calendar">
+    <!-- Calendar header: navigation + subview chips -->
+    <div class="calendar-header">
+      <button type="button" id="cal-prev" aria-label="Previous period">‹</button>
+      <span class="calendar-month-label"></span>
+      <button type="button" id="cal-next" aria-label="Next period">›</button>
+      <button type="button" id="cal-today">Today</button>
+    </div>
+    <!-- Subview chips (month/week/day) -->
+    <nav class="calendar-subview-nav" aria-label="Calendar subview">
+      <button type="button" data-calendar-subview="month" class="chip active">Month</button>
+      <button type="button" data-calendar-subview="week" class="chip">Week</button>
+      <button type="button" data-calendar-subview="day" class="chip">Day</button>
+    </nav>
+    <!-- calendar-view.js populates this board dynamically -->
+    <div class="calendar-board"></div>
+    <!-- R6: cross-month 412 conflict banner -->
+    <div id="calendar-conflict-banner" hidden role="alertdialog" aria-live="polite">
+      <p class="calendar-conflict-text"></p>
+      <div class="calendar-conflict-actions">
+        <button type="button" class="calendar-conflict-view">View item</button>
+        <button type="button" class="calendar-conflict-dismiss">Dismiss</button>
+      </div>
+    </div>
+  </section>
+</body>
+</html>

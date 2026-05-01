@@ -1,0 +1,136 @@
+<!doctype html>
+<!--
+  Memory browser — Jarvis v1.17.0
+
+  CSP note: NO inline JS is permitted. All script logic lives in app.js.
+  Auth note: Authorization: tma <initData> header only.
+
+  R5 binding: _memorySubmitInFlight flag + AbortController + MEMORY_SUBMIT_TIMEOUT_MS = 30000.
+  R8 binding: memory value rendered via textContent ONLY (not markdown.js — plain text semantics).
+  Memory key whitelist: ^[a-z0-9_-]{1,64}$ enforced client-side + server-side (defense in depth).
+  If-Match header on PATCH; 412 → conflict UI.
+
+  v1.17.0: memory browser webapp at /webapp/memory/ (ADR 017 D3).
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Memory — Jarvis</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script type="module" src="./app.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>🧠 Memory</h1>
+    <a href="../" class="back-link">← Back to hub</a>
+  </header>
+
+  <!-- List view -->
+  <section id="list-view">
+    <div class="search-bar">
+      <input type="search" id="search-input" placeholder="Filter by key…" autocomplete="off">
+    </div>
+    <div class="list-actions">
+      <button id="new-entry-btn" type="button">+ New entry</button>
+    </div>
+    <div id="list-loading" class="status">Loading…</div>
+    <ul id="entry-list" hidden aria-label="Memory entries"></ul>
+    <p id="list-empty" class="status" hidden>No memory entries found.</p>
+    <p id="list-error" class="status error" hidden></p>
+    <button id="list-retry" type="button" hidden>Retry</button>
+  </section>
+
+  <!-- Detail / edit view -->
+  <section id="detail-view" hidden aria-label="Memory entry detail">
+    <div class="detail-header">
+      <button id="detail-back" type="button">← Back</button>
+    </div>
+
+    <!-- Read mode -->
+    <div id="read-mode">
+      <div class="entry-meta">
+        <span id="detail-key" class="entry-key"></span>
+        <span id="detail-category" class="badge"></span>
+      </div>
+      <p id="detail-mtime" class="entry-mtime"></p>
+      <pre id="detail-value" class="entry-value"></pre>
+      <div class="detail-actions">
+        <button id="edit-btn" type="button">Edit</button>
+        <button id="delete-btn" type="button" class="btn-delete">Delete</button>
+      </div>
+    </div>
+
+    <!-- Edit mode -->
+    <div id="edit-mode" hidden>
+      <div class="field">
+        <label for="edit-key">Key</label>
+        <input type="text" id="edit-key" maxlength="64" autocomplete="off" placeholder="my_preference">
+        <p class="field-hint">Lowercase letters, numbers, _ and - only. Max 64 chars.</p>
+      </div>
+      <div class="field">
+        <label for="edit-category">Category</label>
+        <select id="edit-category">
+          <option value="preferences">preferences</option>
+          <option value="profile">profile</option>
+          <option value="projects">projects</option>
+          <option value="people">people</option>
+          <option value="avoid">avoid</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="edit-value">Value</label>
+        <textarea id="edit-value" rows="6" maxlength="10240" placeholder="Entry value (plain text)"></textarea>
+      </div>
+
+      <!-- Conflict panel (hidden until 412) -->
+      <div id="conflict-panel" hidden class="conflict-panel" role="alert">
+        <p id="conflict-message" class="conflict-message"></p>
+        <div class="conflict-actions">
+          <button id="conflict-overwrite" type="button">Save Anyway</button>
+          <button id="conflict-cancel" type="button">Cancel</button>
+        </div>
+      </div>
+
+      <p id="edit-error" class="form-error" hidden></p>
+
+      <div class="form-actions">
+        <button id="save-btn" type="button">Save</button>
+        <button id="edit-cancel" type="button">Cancel</button>
+      </div>
+    </div>
+
+    <!-- New entry mode -->
+    <div id="new-mode" hidden>
+      <div class="field">
+        <label for="new-key">Key</label>
+        <input type="text" id="new-key" maxlength="64" autocomplete="off" placeholder="my_preference">
+        <p class="field-hint">Lowercase letters, numbers, _ and - only. Max 64 chars.</p>
+      </div>
+      <div class="field">
+        <label for="new-category">Category</label>
+        <select id="new-category">
+          <option value="preferences">preferences</option>
+          <option value="profile">profile</option>
+          <option value="projects">projects</option>
+          <option value="people">people</option>
+          <option value="avoid">avoid</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="new-value">Value</label>
+        <textarea id="new-value" rows="6" maxlength="10240" placeholder="Entry value (plain text)"></textarea>
+      </div>
+      <p id="new-error" class="form-error" hidden></p>
+      <div class="form-actions">
+        <button id="new-save-btn" type="button">Create</button>
+        <button id="new-cancel" type="button">Cancel</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+</body>
+</html>

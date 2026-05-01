@@ -1,0 +1,147 @@
+{
+  "telegram": {
+    "allowedUserIds": [123456789],
+    "botToken": "ENV:TELEGRAM_BOT_TOKEN"
+  },
+  "ai": {
+    "defaultProvider": "ollama-cloud",
+    "defaultModel": "glm-5.1:cloud",
+    "premiumProvider": "claude",
+    "premiumModel": "claude-sonnet-4-6",
+    "maxTokens": 4096,
+    "temperature": 0.3,
+    "maxToolIterations": 10,
+    "providers": {
+      "claude": {},
+      "ollama-cloud": {}
+    },
+    "routing": {
+      "enabled": true,
+      "fallbackToClaudeOnError": true,
+      "logRoutingDecisions": true
+    }
+  },
+  "whisper": {
+    "model": "whisper-1",
+    "apiBaseUrl": "https://api.openai.com/v1"
+  },
+  "health": {
+    "port": 7878
+  },
+  "chat": {
+    "userQueueMax": 5,
+    "schedulerQueueMax": 20,
+    "maxQueueAgeMs": 600000
+  },
+  "safety": {
+    "confirmationTtlMs": 300000,
+    "commandTimeoutMs": 120000,
+    "maxOutputLength": 4000,
+    "allowEncodedCommands": false,
+    "blockedCommands": [
+      { "pattern": "Remove-Item\\s+.*-Recurse", "kind": "regex", "action": "confirm" },
+      { "pattern": "format\\s+[A-Za-z]:", "kind": "regex", "action": "block" }
+    ]
+  },
+  "filesystem": {
+    "allowedPaths": [
+      "D:\\ai-jarvis",
+      "D:\\projects"
+    ],
+    "readDenyGlobs": [
+      ".env",
+      ".env.*",
+      "**/id_rsa",
+      "**/id_rsa.pub",
+      "**/*.pem",
+      "**/*.key",
+      "**/credentials*.json",
+      "**/service-account*.json",
+      "**/.aws/**",
+      "**/.ssh/**",
+      "logs/**",
+      "data/**"
+    ]
+  },
+  "web": {
+    "enabled": false,
+    "allowedHosts": []
+  },
+  "memory": {
+    "dbPath": "./data/jarvis.db",
+    "maxHistoryMessages": 50
+  },
+  "mcp": {
+    "enabled": true,
+    "servers": [
+      {
+        "name": "context7",
+        "url": "https://mcp.context7.com/mcp",
+        "enabled": true,
+        "transport": "http"
+      }
+    ]
+  },
+  "tavily": {
+    "enabled": true,
+    "apiKey": "ENV:TAVILY_API_KEY",
+    "baseUrl": "https://api.tavily.com"
+  },
+  "context": {
+    "autoCompact": true,
+    "compactThreshold": 0.75,
+    "notifyUser": true
+  },
+  "groups": {
+    "enabled": false,
+    "allowedGroupIds": [],
+    "adminUserIds": [],
+    "rateLimitPerUser": 10,
+    "rateLimitWindowMinutes": 60,
+    "maxResponseLength": 2000,
+    "disabledTools": ["run_command", "write_file", "system_info"]
+  },
+  "aliases": {},
+  "organize": {
+    "reminders": {
+      "enabled": true,
+      "cronExpression": "0 8-20/2 * * *",
+      "minActiveItemsForOptIn": 3,
+      "dailyCap": 3,
+      "itemCooldownMinutes": 4320,
+      "muteAfterConsecutiveIgnores": 3,
+      "quietHoursLocal": [22, 23, 0, 1, 2, 3, 4, 5, 6, 7],
+      "maxItemsPerTriage": 50,
+      "triageProvider": "ollama-cloud",
+      "triageModel": "deepseek-v4-flash:cloud",
+      "fallbackProvider": "claude",
+      "fallbackModel": "claude-haiku-4-5",
+      "triageTimeoutMs": 120000,
+      "haikuFallbackMaxPerDay": 20,
+      "globalHaikuFallbackMaxPerDay": 500,
+      "tickConcurrency": 5
+    },
+    "trashTtlDays": 30,
+    "trashEvictCron": "0 4 * * *",
+    "trashEvictWallTimeWarnMs": 600000,
+    "trashEvictAuditZeroBatches": false,
+    "reconcileHotEmitterThreshold": 100
+  },
+  "projects": [
+    { "name": "Example App", "path": "D:\\projects\\example-app" },
+    { "name": "Another App", "path": "D:\\projects\\another-app" },
+    { "name": "Third App", "path": "D:\\projects\\third-app" }
+  ],
+  "debate": {
+    "panelStateCacheMax": 50,
+    "panelStateTtlHours": 24
+  },
+  "webapp": {
+    "publicUrl": "",
+    "staticDir": "public/webapp",
+    "port": 7879,
+    "initDataMaxAgeSeconds": 86400,
+    "initDataMaxFutureSkewSeconds": 300,
+    "itemsInitDataMaxAgeSeconds": 3600
+  }
+}

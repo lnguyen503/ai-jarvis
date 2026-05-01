@@ -1,0 +1,183 @@
+<!doctype html>
+<!--
+  Cron builder — Jarvis v1.17.0
+
+  CSP note: NO inline JS is permitted. All script logic lives in app.js.
+  The Telegram WebApp SDK is loaded from the official CDN (telegram.org)
+  which is explicitly allowed by the CSP script-src directive in src/webapp/server.ts.
+
+  Auth note: Authorization: tma <initData> header only.
+
+  R8 binding: task action field rendered via textContent ONLY — never innerHTML.
+  R5 binding: _cronSubmitInFlight flag + AbortController + 30s timeout.
+  W2 binding: cronToPreset recognizes both 1-5 and 1,2,3,4,5 weekday forms.
+
+  v1.17.0: cron builder webapp at /webapp/cron/ (ADR 017 D2).
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Cron — Jarvis</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script type="module" src="./app.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>🕐 Cron</h1>
+    <a href="../" class="back-link">← Back to hub</a>
+  </header>
+
+  <!-- List view -->
+  <section id="list-view">
+    <div class="list-actions">
+      <button id="new-task-btn" type="button">+ New task</button>
+    </div>
+    <div id="list-loading" class="status">Loading…</div>
+    <ul id="task-list" hidden aria-label="Scheduled tasks"></ul>
+    <p id="list-empty" class="status" hidden>No scheduled tasks. Create one below.</p>
+    <p id="list-error" class="status error" hidden></p>
+    <button id="list-retry" type="button" hidden>Retry</button>
+
+    <!-- v1.18.0 ADR 018 + v1.20.0 ADR 020 D18: Coach Jarvis setup section -->
+    <section id="coach-section" class="coach-section" aria-label="Coach Jarvis">
+      <h2 class="coach-section-title">🤖 Coach Jarvis</h2>
+      <p id="coach-status" class="coach-status">Not set up</p>
+
+      <!-- v1.20.0 ADR 020 D18: Multi-profile setup form -->
+      <div id="coach-multi-profile-setup" class="coach-multi-profile-setup">
+        <p class="coach-multi-profile-label">Set up a coaching schedule:</p>
+
+        <!-- Profile picker (single-select) -->
+        <div class="coach-profile-picker" role="radiogroup" aria-label="Coach profile">
+          <button type="button" class="coach-profile-btn" data-profile="morning" aria-pressed="true">Morning</button>
+          <button type="button" class="coach-profile-btn" data-profile="midday" aria-pressed="false">Midday</button>
+          <button type="button" class="coach-profile-btn" data-profile="evening" aria-pressed="false">Evening</button>
+          <button type="button" class="coach-profile-btn" data-profile="weekly" aria-pressed="false">Weekly</button>
+        </div>
+
+        <!-- Weekday picker (only visible for Weekly profile) -->
+        <div id="coach-weekday-picker" class="coach-weekday-picker" hidden aria-label="Weekday">
+          <button type="button" class="coach-weekday-btn" data-dow="0" aria-pressed="false">Sun</button>
+          <button type="button" class="coach-weekday-btn" data-dow="1" aria-pressed="true">Mon</button>
+          <button type="button" class="coach-weekday-btn" data-dow="2" aria-pressed="false">Tue</button>
+          <button type="button" class="coach-weekday-btn" data-dow="3" aria-pressed="false">Wed</button>
+          <button type="button" class="coach-weekday-btn" data-dow="4" aria-pressed="false">Thu</button>
+          <button type="button" class="coach-weekday-btn" data-dow="5" aria-pressed="false">Fri</button>
+          <button type="button" class="coach-weekday-btn" data-dow="6" aria-pressed="false">Sat</button>
+        </div>
+
+        <!-- Time picker -->
+        <div class="coach-profile-fields">
+          <label for="coach-profile-time" class="coach-time-label">Time</label>
+          <input type="time" id="coach-profile-time" class="coach-time-input" value="09:00">
+        </div>
+
+        <button type="button" id="coach-profile-save" class="coach-setup-btn">Save profile</button>
+        <p id="coach-profile-save-error" class="coach-setup-error" hidden></p>
+      </div>
+
+      <!-- v1.18.0 back-compat: legacy single-time setup (hidden by default; shown if no multi-profile UI) -->
+      <div class="coach-setup-row" hidden>
+        <label for="coach-time-input" class="coach-time-label">Daily coaching time</label>
+        <input type="time" id="coach-time-input" class="coach-time-input" value="09:00">
+        <button type="button" id="coach-setup-btn" class="coach-setup-btn">Set up Coach Jarvis</button>
+      </div>
+      <p id="coach-setup-error" class="coach-setup-error" hidden></p>
+
+      <div class="coach-reset-row">
+        <button type="button" id="coach-reset-btn" class="coach-reset-btn">Reset Memory</button>
+        <span class="coach-reset-hint">Clears all coach conversation history (all profiles)</span>
+      </div>
+    </section>
+  </section>
+
+  <!-- Create / edit form (hidden until new/edit tapped) -->
+  <section id="task-form" hidden aria-label="Task form">
+    <h2 id="form-title">New scheduled task</h2>
+
+    <div class="field">
+      <label for="task-description">Description</label>
+      <input type="text" id="task-description" maxlength="500" autocomplete="off" placeholder="Daily reminder">
+    </div>
+
+    <div class="field">
+      <label for="task-action">Action text</label>
+      <input type="text" id="task-action" maxlength="500" autocomplete="off" placeholder="Send me a summary">
+    </div>
+
+    <!-- Visual cron builder -->
+    <fieldset id="preset-fieldset">
+      <legend>Schedule preset</legend>
+      <div id="preset-buttons" role="group" aria-label="Schedule presets">
+        <button type="button" class="preset-btn" data-preset="every_n_minutes">Every X minutes</button>
+        <button type="button" class="preset-btn" data-preset="every_day">Every day</button>
+        <button type="button" class="preset-btn" data-preset="every_weekday">Every weekday</button>
+        <button type="button" class="preset-btn" data-preset="every_mwf">Mon/Wed/Fri</button>
+        <button type="button" class="preset-btn" data-preset="every_weekend">Weekend</button>
+        <button type="button" class="preset-btn" data-preset="custom">Custom</button>
+      </div>
+
+      <!-- Preset-specific params (show/hide per selection) -->
+      <div id="preset-params" class="preset-params">
+        <!-- every_n_minutes -->
+        <div id="param-every-n" class="param-group" hidden>
+          <label for="param-interval">Every
+            <select id="param-interval">
+              <option value="5">5 minutes</option>
+              <option value="10">10 minutes</option>
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+            </select>
+          </label>
+        </div>
+        <!-- every_day / every_weekday / every_mwf / every_weekend -->
+        <div id="param-time" class="param-group" hidden>
+          <label for="param-hour">At
+            <select id="param-hour"><!-- populated by JS --></select>
+            :
+            <select id="param-minute">
+              <option value="0">00</option>
+              <option value="15">15</option>
+              <option value="30">30</option>
+              <option value="45">45</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- Raw cron expression -->
+    <div class="field">
+      <label for="task-expr">Cron expression</label>
+      <input type="text" id="task-expr" maxlength="100" autocomplete="off" placeholder="*/5 * * * *" spellcheck="false">
+    </div>
+
+    <!-- Live preview -->
+    <div id="preview-block" class="preview-block" hidden>
+      <p class="preview-label">Next fire times (UTC):</p>
+      <ul id="preview-list" class="preview-list"></ul>
+      <p id="preview-warning" class="preview-warning" hidden></p>
+    </div>
+    <p id="preview-error" class="preview-error" hidden></p>
+
+    <div class="field field-toggle">
+      <label>
+        <input type="checkbox" id="task-active" checked>
+        Active
+      </label>
+    </div>
+
+    <p id="form-error" class="form-error" hidden></p>
+
+    <div class="form-actions">
+      <button type="button" id="form-submit">Save</button>
+      <button type="button" id="form-cancel">Cancel</button>
+    </div>
+  </section>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+</body>
+</html>

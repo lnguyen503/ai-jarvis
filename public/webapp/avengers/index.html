@@ -1,0 +1,102 @@
+<!doctype html>
+<!--
+  Avengers Operations Dashboard — Jarvis v1.22.27
+
+  Telegram Web App view that opens via the inline button on Jarvis's TODO
+  message. Reads URL params: ?planId=N&chatId=M
+    - planId: which plan to load on entry (optional; falls back to most recent)
+    - chatId: scope plans to this chat (required for the list view)
+
+  Auth: HMAC initData header `Authorization: tma <initData>` — same chain as
+  the /organize webapp.
+
+  CSP note: NO inline JS. All logic in app.js. Telegram SDK loaded from
+  telegram.org per the strict CSP set in src/webapp/server.ts.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Avengers Operations</title>
+<link rel="stylesheet" href="./styles.css">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+<div id="app" class="app" data-state="loading">
+  <header class="hdr">
+    <div class="hdr-row">
+      <div class="hdr-badge">🛡️ AVENGERS</div>
+      <div class="hdr-status" id="hdr-status" hidden></div>
+    </div>
+    <h1 class="hdr-title" id="hdr-title">Operations</h1>
+    <div class="hdr-task" id="hdr-task" hidden>
+      <div class="hdr-task-label">Request from Boss</div>
+      <blockquote class="hdr-task-text" id="hdr-task-text"></blockquote>
+    </div>
+    <div class="hdr-meta" id="hdr-meta"></div>
+  </header>
+
+  <main class="main">
+    <!-- Loading state -->
+    <div class="state-loading" id="state-loading">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="loading-text">Loading operation…</div>
+    </div>
+
+    <!-- Error state -->
+    <div class="state-error" id="state-error" hidden>
+      <div class="error-icon">⚠️</div>
+      <div class="error-text" id="error-text">Something went wrong.</div>
+    </div>
+
+    <!-- Empty state (no plans) -->
+    <div class="state-empty" id="state-empty" hidden>
+      <div class="empty-icon">🛡️</div>
+      <div class="empty-title">No operations yet</div>
+      <div class="empty-text">
+        Run an Avengers operation in your group chat — Jarvis will delegate to
+        the team and a live operation will appear here.
+      </div>
+    </div>
+
+    <!-- Plan list (multiple plans for the chat) -->
+    <div class="state-list" id="state-list" hidden>
+      <h2 class="section-title">Recent operations</h2>
+      <ul class="plan-list" id="plan-list"></ul>
+    </div>
+
+    <!-- Single plan detail -->
+    <div class="state-detail" id="state-detail" hidden>
+      <ol class="step-list" id="step-list"></ol>
+
+      <div class="deliverable" id="deliverable" hidden>
+        <div class="deliverable-row">
+          <div class="deliverable-icon">📄</div>
+          <div class="deliverable-meta">
+            <div class="deliverable-title">Final deliverable ready</div>
+            <div class="deliverable-sub" id="deliverable-sub"></div>
+          </div>
+          <a class="deliverable-btn" id="deliverable-btn" target="_blank" rel="noopener">Open in tab</a>
+        </div>
+        <div class="deliverable-preview" id="deliverable-preview" hidden>
+          <div class="deliverable-preview-toolbar">
+            <span>Deliverable preview</span>
+            <a id="deliverable-preview-open" target="_blank" rel="noopener">Open full ↗</a>
+          </div>
+          <iframe id="deliverable-iframe" sandbox="allow-same-origin" title="Avengers deliverable"></iframe>
+        </div>
+      </div>
+
+      <button class="back-btn" id="back-btn" hidden>← Back to operations</button>
+    </div>
+  </main>
+
+  <footer class="ftr">
+    <div class="ftr-text">Avengers · Jarvis v1.22.27</div>
+    <div class="ftr-text" id="ftr-poll" hidden>Live · refreshing every 2s</div>
+  </footer>
+</div>
+
+<script type="module" src="./app.js" defer></script>
+</body>
+</html>

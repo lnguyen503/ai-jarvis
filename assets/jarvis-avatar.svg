@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="640" height="640">
+  <!--
+    Jarvis avatar — square 640×640 (Telegram crops to circle).
+
+    Design language:
+      • Deep navy near-black so the cream J pops at 32×32 (chat list thumbnail).
+      • Subtle inner ring frame (Iron-Man-arc-reactor adjacent, not a copy).
+      • Bold geometric J — the only thing readable at thumbnail size.
+      • Tiny cyan "online" dot in the upper-right (the AI-is-listening indicator).
+
+    Pure vector — scales cleanly to any size BotFather accepts.
+  -->
+
+  <defs>
+    <!-- Soft glow on the cyan dot — gives it a sense of being "alive". -->
+    <radialGradient id="dotGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#7DD3FC" stop-opacity="1"/>
+      <stop offset="60%" stop-color="#38BDF8" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0EA5E9" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Very subtle vignette so the J center sits forward of the bg. -->
+    <radialGradient id="bgGradient" cx="50%" cy="50%" r="65%">
+      <stop offset="0%" stop-color="#162338"/>
+      <stop offset="100%" stop-color="#0A1322"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Full-bleed background. Telegram's circle crop will inscribe the visible area. -->
+  <rect x="0" y="0" width="640" height="640" fill="url(#bgGradient)"/>
+
+  <!-- Inner ring — sits just inside the crop boundary, gives a frame without competing with the J. -->
+  <circle cx="320" cy="320" r="290" fill="none" stroke="#1F3257" stroke-width="3" opacity="0.7"/>
+  <circle cx="320" cy="320" r="284" fill="none" stroke="#0EA5E9" stroke-width="1" opacity="0.18"/>
+
+  <!--
+    The "J" — drawn as a path so it doesn't depend on installed fonts.
+    Geometric, slightly heavier than a standard sans, with a clean rounded foot.
+    Centered at 320×320 with optical centering offset.
+  -->
+  <g transform="translate(320 320)">
+    <!-- Main vertical stroke + curved foot of the J -->
+    <path
+      d="
+        M 70 -160
+        L 70 65
+        Q 70 130, 0 130
+        Q -70 130, -70 60
+        L -70 30
+        L -10 30
+        L -10 60
+        Q -10 90, 5 90
+        Q 20 90, 20 65
+        L 20 -160
+        Z
+      "
+      fill="#F4ECD8"
+    />
+    <!-- Top crossbar — gives the J a serif-ish anchor -->
+    <rect x="-15" y="-160" width="100" height="22" fill="#F4ECD8"/>
+  </g>
+
+  <!-- "I'm awake" indicator — small cyan dot upper right, glowing softly. -->
+  <circle cx="475" cy="165" r="22" fill="url(#dotGlow)"/>
+  <circle cx="475" cy="165" r="9" fill="#7DD3FC"/>
+</svg>

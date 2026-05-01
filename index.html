@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🐍 Snake Game</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+      color: #eee;
+    }
+    h1 { font-size: 2rem; margin-bottom: 8px; letter-spacing: 2px; color: #00ff88; }
+    #scoreboard {
+      display: flex;
+      gap: 40px;
+      margin-bottom: 16px;
+      font-size: 1rem;
+      color: #aaa;
+    }
+    #scoreboard span { color: #00ff88; font-weight: bold; font-size: 1.2rem; }
+    canvas {
+      border: 2px solid #00ff88;
+      border-radius: 8px;
+      box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+    }
+    #message {
+      margin-top: 16px;
+      font-size: 1rem;
+      color: #aaa;
+      height: 24px;
+    }
+    #message b { color: #00ff88; }
+  </style>
+</head>
+<body>
+  <h1>🐍 SNAKE</h1>
+  <div id="scoreboard">
+    <div>SCORE: <span id="score">0</span></div>
+    <div>BEST: <span id="best">0</span></div>
+    <div>LEVEL: <span id="level">1</span></div>
+  </div>
+  <canvas id="canvas" width="400" height="400"></canvas>
+  <div id="message">Press <b>SPACE</b> or <b>ENTER</b> to start</div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const GRID = 20;
+    const COLS = canvas.width / GRID;
+    const ROWS = canvas.height / GRID;
+
+    let snake, dir, nextDir, food, score, best, level, speed, gameLoop, running, dead;
+
+    function init() {
+      snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+      dir = { x: 1, y: 0 };
+      nextDir = { x: 1, y: 0 };
+      score = 0;
+      level = 1;
+      speed = 150;
+      dead = false;
+      running = true;
+      updateUI();
+      placeFood();
+      if (gameLoop) clearInterval(gameLoop);
+      gameLoop = setInterval(tick, speed);
+      document.getElementById('message').innerHTML = 'Use <b>Arrow Keys</b> or <b>WASD</b> to move';
+    }
+
+    function placeFood() {
+      let pos;
+      do {
+        pos = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
+      } while (snake.some(s => s.x === pos.x && s.y === pos.y));
+      food = pos;
+    }
+
+    function tick() {
+      dir = nextDir;
+      const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+      // Wall collision
+      if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) return endGame();
+      // Self collision
+      if (snake.some(s => s.x === head.x && s.y === head.y)) return endGame();
+
+      snake.unshift(head);
+
+      if (head.x === food.x && head.y === food.y) {
+        score += level * 10;
+        if (score >= level * 50) {
+          level++;
+          speed = Math.max(60, 150 - (level - 1) * 15);
+          clearInterval(gameLoop);
+          gameLoop = setInterval(tick, speed);
+        }
+        updateUI();
+        placeFood();
+      } else {
+        snake.pop();
+      }
+
+      draw();
+    }
+
+    function endGame() {
+      clearInterval(gameLoop);
+      running = false;
+      dead = true;
+      if (score > best) {
+        best = score;
+        document.getElementById('best').textContent = best;
+      }
+      draw();
+      document.getElementById('message').innerHTML = `💀 Game Over! Score: <b>${score}</b> — Press <b>SPACE</b> to restart`;
+    }
+
+    function updateUI() {
+      document.getElementById('score').textContent = score;
+      document.getElementById('level').textContent = level;
+      if (score > best) {
+        best = score;
+        document.getElementById('best').textContent = best;
+      }
+    }
+
+    function draw() {
+      // Background
+      ctx.fillStyle = '#0f0f1a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Grid dots
+      ctx.fillStyle = 'rgba(255,255,255,0.03)';
+      for (let x = 0; x < COLS; x++)
+        for (let y = 0; y < ROWS; y++)
+          ctx.fillRect(x * GRID + GRID / 2 - 1, y * GRID + GRID / 2 - 1, 2, 2);
+
+      // Food
+      const fx = food.x * GRID + GRID / 2;
+      const fy = food.y * GRID + GRID / 2;
+      ctx.shadowColor = '#ff4444';
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = '#ff4444';
+      ctx.beginPath();
+      ctx.arc(fx, fy, GRID / 2 - 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Snake
+      snake.forEach((seg, i) => {
+        const alpha = dead ? 0.4 : 1;
+        const ratio = i / snake.length;
+        const r = Math.floor(0 + ratio * 0);
+        const g = Math.floor(255 - ratio * 100);
+        const b = Math.floor(136 - ratio * 80);
+        ctx.fillStyle = dead ? `rgba(180,0,0,${alpha})` : `rgba(${r},${g},${b},${alpha})`;
+        ctx.shadowColor = dead ? '#ff0000' : '#00ff88';
+        ctx.shadowBlur = i === 0 ? 12 : 4;
+
+        const x = seg.x * GRID + 2;
+        const y = seg.y * GRID + 2;
+        const size = GRID - 4;
+        roundRect(ctx, x, y, size, size, i === 0 ? 6 : 4);
+        ctx.fill();
+      });
+      ctx.shadowBlur = 0;
+
+      // Eyes on head
+      if (!dead) {
+        const hx = snake[0].x * GRID;
+        const hy = snake[0].y * GRID;
+        ctx.fillStyle = '#1a1a2e';
+        const eyeOffsets = getEyeOffsets(dir);
+        eyeOffsets.forEach(([ex, ey]) => {
+          ctx.beginPath();
+          ctx.arc(hx + ex, hy + ey, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+    }
+
+    function getEyeOffsets(d) {
+      if (d.x === 1)  return [[14, 5], [14, 14]];
+      if (d.x === -1) return [[5, 5], [5, 14]];
+      if (d.y === -1) return [[5, 5], [14, 5]];
+      if (d.y === 1)  return [[5, 14], [14, 14]];
+      return [[14, 5], [14, 14]];
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    // Controls
+    document.addEventListener('keydown', e => {
+      switch (e.key) {
+        case 'ArrowUp':    case 'w': case 'W': if (dir.y !== 1)  nextDir = { x: 0, y: -1 }; break;
+        case 'ArrowDown':  case 's': case 'S': if (dir.y !== -1) nextDir = { x: 0, y: 1 };  break;
+        case 'ArrowLeft':  case 'a': case 'A': if (dir.x !== 1)  nextDir = { x: -1, y: 0 }; break;
+        case 'ArrowRight': case 'd': case 'D': if (dir.x !== -1) nextDir = { x: 1, y: 0 };  break;
+        case ' ': case 'Enter':
+          if (!running) init();
+          break;
+      }
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+    });
+
+    // Initial draw before game starts
+    (function splash() {
+      ctx.fillStyle = '#0f0f1a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#00ff88';
+      ctx.font = 'bold 36px Segoe UI';
+      ctx.textAlign = 'center';
+      ctx.fillText('🐍 SNAKE', canvas.width / 2, canvas.height / 2 - 20);
+      ctx.fillStyle = '#aaa';
+      ctx.font = '16px Segoe UI';
+      ctx.fillText('Press SPACE or ENTER to start', canvas.width / 2, canvas.height / 2 + 20);
+    })();
+
+    best = 0;
+    document.addEventListener('keydown', function startOnce(e) {
+      if (e.key === ' ' || e.key === 'Enter') {
+        init();
+        document.removeEventListener('keydown', startOnce);
+      }
+    });
+  </script>
+</body>
+</html>

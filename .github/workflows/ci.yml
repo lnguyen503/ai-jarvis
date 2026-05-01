@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  ci:
+    name: Build, Type-check, Test, Audit
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Run tests with coverage
+        run: npx vitest run --coverage
+        env:
+          # Tests mock all external APIs — no real keys needed in CI
+          TELEGRAM_BOT_TOKEN: ci-placeholder-token
+          ANTHROPIC_API_KEY: sk-ant-ci-placeholder
+          OPENAI_API_KEY: sk-ci-placeholder
+
+      - name: Security audit (prod deps only)
+        run: npm audit --omit=dev
+        # Allow the job to continue even if audit exits non-zero so we get
+        # the report in the log. Change to `run: npm audit --omit=dev` without
+        # `continue-on-error` once all advisories are resolved.
+        continue-on-error: false

@@ -1,0 +1,89 @@
+<!doctype html>
+<!--
+  Debate page — Jarvis v1.16.0
+
+  CSP note: NO inline JS is permitted. All script logic lives in the
+  sibling app.js file. The Telegram WebApp SDK is loaded from the official CDN
+  (telegram.org) which is explicitly allowed by the CSP script-src directive
+  set in src/webapp/server.ts.
+
+  Auth note: the page uses the Authorization: tma <initData> header only.
+  The ?initData= query-string fallback is intentionally absent — it creates a
+  24-hour phishing surface via browser history / referer leaks with zero gain.
+
+  SSE note (ADR 016 D3): EventSource API does not support custom headers.
+  The webapp uses fetch() + response.body.getReader() + TextDecoder instead of
+  new EventSource(url). ~50 LOC of client-side glue in app.js.
+
+  Back-link: the <a href="../"> link returns to the hub without closing the
+  webview — per ADR 009 R12.2, this is intentional.
+
+  v1.16.0: initial debate webapp at /webapp/debate/ (ADR 016 D1).
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Debate — Jarvis</title>
+  <link rel="stylesheet" href="./styles.css">
+  <!-- Telegram WebApp SDK from official CDN — allowed by CSP script-src -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script type="module" src="./app.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>🤔 Debate</h1>
+    <!--
+      Back link — not a button, intentionally. A <button> that called
+      window.history.back() or twa.close() would close the entire webview,
+      ejecting the user to Telegram. This <a> navigates to the hub page
+      within the same webview. See ADR 009 R12.2.
+    -->
+    <a href="../" class="back-link">← Back to hub</a>
+  </header>
+
+  <!-- ----------------------------------------------------------------
+       List view: shown at page load; hidden when a debate is opened.
+  ----------------------------------------------------------------- -->
+  <section id="list-view">
+    <div id="list-loading" class="status">Loading debates…</div>
+    <ul id="debate-list" hidden aria-label="Debate history"></ul>
+    <p id="list-empty" class="status" hidden>No debates yet. Start one with <code>/debate</code> in Telegram.</p>
+    <p id="list-error" class="status error" hidden></p>
+    <button id="list-retry" type="button" hidden>Retry</button>
+  </section>
+
+  <!-- ----------------------------------------------------------------
+       Detail view: shown when a debate row is tapped.
+       Hidden until a debate is selected.
+  ----------------------------------------------------------------- -->
+  <section id="detail-view" hidden aria-label="Debate detail">
+    <div class="detail-header">
+      <button id="detail-back" type="button">← Back</button>
+      <div id="live-indicator" class="live-indicator" hidden aria-live="polite">
+        <span class="live-pulse"></span>
+        <span class="live-text">Streaming…</span>
+      </div>
+    </div>
+
+    <h2 id="detail-topic" class="detail-topic"></h2>
+    <p id="detail-meta" class="detail-meta"></p>
+
+    <!-- Side-by-side debater columns (CSS grid; mobile <768px collapses to accordion) -->
+    <div id="debater-columns" class="debater-columns" role="list" aria-label="Debater columns">
+      <!-- Populated dynamically by app.js -->
+    </div>
+
+    <!-- Verdict section — hidden until debate is complete -->
+    <details id="verdict-section" hidden class="verdict-section">
+      <summary>Verdict &amp; reasoning</summary>
+      <div id="verdict-content" class="verdict-content">
+        <!-- Populated dynamically by app.js -->
+      </div>
+    </details>
+  </section>
+
+  <!-- Toast container — body-level, accessible live region -->
+  <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+</body>
+</html>
