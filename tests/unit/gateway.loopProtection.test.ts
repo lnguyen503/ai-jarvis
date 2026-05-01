@@ -1,18 +1,28 @@
 /**
  * Unit tests for src/gateway/loopProtection.ts (v1.21.0 D10).
  *
+ * History of the cap value:
+ *   - v1.21.0  → 3 (initial)
+ *   - v1.21.14 → 10 (raised)
+ *   - v1.22.37 → 5 (dropped — smaller models persona-drift faster)
+ *
+ * v1.22.45 added a `cap: number` field to checkBotToBotLoop's return value
+ * so callers can see which cap engaged (with-plan vs no-plan vs sustained).
+ * Tests that previously deep-equaled `{ allowed, count }` must now also
+ * include `cap` (or use objectContaining).
+ *
  * Covers:
- *   - 3-turn limit: 3rd bot-to-bot turn is allowed; 4th is blocked
+ *   - cap limit: count < MAX is allowed; count === MAX is blocked
  *   - Reset on user message: counter drops to zero
  *   - threadKey derivation: <chatId>:<threadId>
  *   - threadKey without threadId: <chatId> only
  *   - TTL expiry: entry older than LOOP_COUNTER_TTL_MS is treated as zero
  *   - Independent counters per threadKey
  *   - getBotToBotCount reflects live state
- *   - checkBotToBotLoop on empty state returns allowed=true, count=0
+ *   - checkBotToBotLoop on empty state returns allowed=true, count=0, cap=5
  *   - recordBotToBotTurn increments sequentially
  *   - recordBotToBotTurn after TTL restarts counter at 1
- *   - MAX_BOT_TO_BOT_TURNS is 3
+ *   - MAX_BOT_TO_BOT_TURNS is 5
  *   - LOOP_COUNTER_TTL_MS is 3_600_000
  */
 
@@ -41,8 +51,8 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('constants', () => {
-  it('LP-1: MAX_BOT_TO_BOT_TURNS is 10 (v1.21.14 — raised from 3)', () => {
-    expect(MAX_BOT_TO_BOT_TURNS).toBe(10);
+  it('LP-1: MAX_BOT_TO_BOT_TURNS is 5 (v1.22.37 — dropped from 10)', () => {
+    expect(MAX_BOT_TO_BOT_TURNS).toBe(5);
   });
 
   it('LP-2: LOOP_COUNTER_TTL_MS is 3_600_000', () => {
@@ -69,9 +79,9 @@ describe('deriveThreadKey', () => {
 // ---------------------------------------------------------------------------
 
 describe('checkBotToBotLoop — empty state', () => {
-  it('LP-5: fresh state returns allowed=true, count=0', () => {
+  it('LP-5: fresh state returns allowed=true, count=0, cap=5', () => {
     const key = deriveThreadKey(CHAT_A, 1);
-    expect(checkBotToBotLoop(key, NOW)).toEqual({ allowed: true, count: 0 });
+    expect(checkBotToBotLoop(key, NOW)).toEqual({ allowed: true, count: 0, cap: MAX_BOT_TO_BOT_TURNS });
   });
 });
 
@@ -107,7 +117,7 @@ describe('recordBotToBotTurn + 3-turn cap', () => {
     expect(getBotToBotCount(key, NOW)).toBe(3);
   });
 
-  it('LP-9: 11th turn (count=10) → allowed=false, loop protection engages', () => {
+  it('LP-9: turn at MAX (count=MAX_BOT_TO_BOT_TURNS) → allowed=false, loop protection engages', () => {
     const key = deriveThreadKey(CHAT_A, 13);
     for (let i = 0; i < MAX_BOT_TO_BOT_TURNS; i++) {
       recordBotToBotTurn(key, NOW);
@@ -136,13 +146,13 @@ describe('resetBotToBotCounterOnUserMessage', () => {
     resetBotToBotCounterOnUserMessage(key);
 
     // Counter reset — allowed again
-    expect(checkBotToBotLoop(key, NOW)).toEqual({ allowed: true, count: 0 });
+    expect(checkBotToBotLoop(key, NOW)).toEqual({ allowed: true, count: 0, cap: MAX_BOT_TO_BOT_TURNS });
   });
 
   it('LP-11: reset on key with no prior turns is a no-op (no error)', () => {
     const key = deriveThreadKey(CHAT_B, 99);
     expect(() => resetBotToBotCounterOnUserMessage(key)).not.toThrow();
-    expect(checkBotToBotLoop(key, NOW)).toEqual({ allowed: true, count: 0 });
+    expect(checkBotToBotLoop(key, NOW)).toEqual({ allowed: true, count: 0, cap: MAX_BOT_TO_BOT_TURNS });
   });
 });
 
@@ -159,7 +169,7 @@ describe('TTL expiry', () => {
     }
     // Check at NOW + TTL + 1ms (expired)
     const expiredNow = NOW + LOOP_COUNTER_TTL_MS + 1;
-    expect(checkBotToBotLoop(key, expiredNow)).toEqual({ allowed: true, count: 0 });
+    expect(checkBotToBotLoop(key, expiredNow)).toEqual({ allowed: true, count: 0, cap: MAX_BOT_TO_BOT_TURNS });
   });
 
   it('recordBotToBotTurn after TTL restarts counter at 1', () => {
@@ -190,6 +200,6 @@ describe('per-threadKey isolation', () => {
     // A is blocked
     expect(checkBotToBotLoop(keyA, NOW).allowed).toBe(false);
     // B is independent — still allowed
-    expect(checkBotToBotLoop(keyB, NOW)).toEqual({ allowed: true, count: 0 });
+    expect(checkBotToBotLoop(keyB, NOW)).toEqual({ allowed: true, count: 0, cap: MAX_BOT_TO_BOT_TURNS });
   });
 });

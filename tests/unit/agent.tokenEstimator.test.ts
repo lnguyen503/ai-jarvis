@@ -69,15 +69,19 @@ describe('getCurrentContextLimit', () => {
   });
 
   it('returns known Ollama model limit', () => {
+    // v1.22.21 — :cloud suffix dropped from canonical model names everywhere.
+    // v1.22.26 — knownLimits corrected to real published context windows;
+    // glm-5.1's published window is 200000.
     const cfg = makeTestConfig();
-    const limit = getCurrentContextLimit(cfg, 'ollama-cloud', 'glm-5.1:cloud');
-    expect(limit).toBe(32000);
+    const limit = getCurrentContextLimit(cfg, 'ollama-cloud', 'glm-5.1');
+    expect(limit).toBe(200000);
   });
 
-  it('falls back to 32000 for unknown model', () => {
+  it('falls back to 128000 for unknown model', () => {
+    // v1.22.26 — fallback bumped 32000 → 128000 to match modern model norms.
     const cfg = makeTestConfig();
     const limit = getCurrentContextLimit(cfg, 'ollama-cloud', 'unknown-model:v9');
-    expect(limit).toBe(32000);
+    expect(limit).toBe(128000);
   });
 
   it('reads context limit from config.ai.providers if defined', () => {

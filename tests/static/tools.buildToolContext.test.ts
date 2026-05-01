@@ -25,13 +25,28 @@
  * construction outside of src/tools/buildToolContext.ts is a FAIL.
  */
 
-import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SRC_ROOT = path.resolve(__dirname, '../../src');
+
+// On a fresh public-fork checkout there is no config/config.json yet
+// (the user hasn't created their personal config). Point loadConfig() at
+// the example file so the test setup works in either state.
+beforeAll(() => {
+  const repoRoot = path.resolve(__dirname, '../..');
+  const personalCfg = path.join(repoRoot, 'config', 'config.json');
+  if (!existsSync(personalCfg)) {
+    process.env['CONFIG_PATH'] = path.join(repoRoot, 'config', 'config.example.json');
+  }
+  if (!process.env['TELEGRAM_BOT_TOKEN']) process.env['TELEGRAM_BOT_TOKEN'] = 'test-token';
+  if (!process.env['TAVILY_API_KEY']) process.env['TAVILY_API_KEY'] = 'test-tavily';
+  if (!process.env['GOOGLE_OAUTH_CLIENT_ID']) process.env['GOOGLE_OAUTH_CLIENT_ID'] = 'test-id';
+  if (!process.env['GOOGLE_OAUTH_CLIENT_SECRET']) process.env['GOOGLE_OAUTH_CLIENT_SECRET'] = 'test-secret';
+});
 
 // ---------------------------------------------------------------------------
 // File scanner

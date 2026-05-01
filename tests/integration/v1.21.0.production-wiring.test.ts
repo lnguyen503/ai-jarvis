@@ -39,6 +39,7 @@ import {
   recordBotToBotTurn,
   resetBotToBotCounterOnUserMessage,
   deriveThreadKey,
+  MAX_BOT_TO_BOT_TURNS,
   _resetAllLoopCounters,
 } from '../../src/gateway/loopProtection.js';
 import { buildToolContext } from '../../src/tools/buildToolContext.js';
@@ -309,20 +310,20 @@ describe('Item 3 — maybeWrapBotHistoryEntry / wrapBotMessage', () => {
 // Item 4 — loop protection caps bot-to-bot threads at 3
 // ---------------------------------------------------------------------------
 
-describe('Item 4 — loopProtection wiring (10-turn cap; v1.21.14)', () => {
-  it('PW-4: 10 turns allowed, 11th rejected, user reset clears the counter', () => {
+describe(`Item 4 — loopProtection wiring (${MAX_BOT_TO_BOT_TURNS}-turn cap; v1.22.37 dropped from 10)`, () => {
+  it(`PW-4: ${MAX_BOT_TO_BOT_TURNS} turns allowed, next rejected, user reset clears the counter`, () => {
     const threadKey = deriveThreadKey(12345);
 
-    // 10 bot-to-bot turns allowed
-    for (let i = 0; i < 10; i++) {
+    // MAX_BOT_TO_BOT_TURNS bot-to-bot turns allowed
+    for (let i = 0; i < MAX_BOT_TO_BOT_TURNS; i++) {
       expect(checkBotToBotLoop(threadKey).allowed).toBe(true);
       recordBotToBotTurn(threadKey);
     }
 
-    // 11th rejected with reason 'cap'
+    // Next turn rejected with reason 'cap'
     const result = checkBotToBotLoop(threadKey);
     expect(result.allowed).toBe(false);
-    expect(result.count).toBe(10);
+    expect(result.count).toBe(MAX_BOT_TO_BOT_TURNS);
     expect(result.reason).toBe('cap');
 
     // User message resets
@@ -335,9 +336,10 @@ describe('Item 4 — loopProtection wiring (10-turn cap; v1.21.14)', () => {
     const a = deriveThreadKey(1);
     const b = deriveThreadKey(2);
 
-    recordBotToBotTurn(a);
-    recordBotToBotTurn(a);
-    recordBotToBotTurn(a);
+    // Push thread A to cap, leave thread B untouched.
+    for (let i = 0; i < MAX_BOT_TO_BOT_TURNS; i++) {
+      recordBotToBotTurn(a);
+    }
 
     // Thread A is at cap; Thread B is fresh
     expect(checkBotToBotLoop(a).allowed).toBe(false);

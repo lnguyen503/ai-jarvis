@@ -109,8 +109,9 @@ function makeCtx(userId: number = USER_ID): MockCtx {
 // ---------------------------------------------------------------------------
 
 describe('TOKEN_COSTS_USD_PER_MTOK', () => {
-  it('has deepseek-v4-flash:cloud at 0/0', () => {
-    expect(TOKEN_COSTS_USD_PER_MTOK['deepseek-v4-flash:cloud']).toEqual({ input: 0, output: 0 });
+  it('has deepseek-v4-flash at 0/0 (free under Ollama Cloud subscription)', () => {
+    // v1.22.21 — :cloud suffix dropped from model names everywhere.
+    expect(TOKEN_COSTS_USD_PER_MTOK['deepseek-v4-flash']).toEqual({ input: 0, output: 0 });
   });
 
   it('has claude-haiku-4-5 at $1.00 input / $5.00 output per Mtok', () => {
@@ -134,8 +135,8 @@ describe('computeModelCost', () => {
     expect(cost).toBeCloseTo(0.001, 6);
   });
 
-  it('returns 0 for deepseek-v4-flash:cloud (free)', () => {
-    const cost = computeModelCost('deepseek-v4-flash:cloud', 100000, 50000);
+  it('returns 0 for deepseek-v4-flash (free)', () => {
+    const cost = computeModelCost('deepseek-v4-flash', 100000, 50000);
     expect(cost).toBe(0);
   });
 
@@ -208,9 +209,9 @@ describe('handleNagCost — argument validation', () => {
 describe('handleNagCost — days=7 per-day table (DeepSeek + Haiku rows)', () => {
   it('renders per-day table with correct cost math and "Prices as of" footer', async () => {
     const rows = [
-      makeNudgeRow('2026-04-23T10:00:00.000Z', 'deepseek-v4-flash:cloud', 5000, 500, 'ok', false),
+      makeNudgeRow('2026-04-23T10:00:00.000Z', 'deepseek-v4-flash', 5000, 500, 'ok', false),
       makeNudgeRow('2026-04-23T11:00:00.000Z', 'claude-haiku-4-5', 1000, 500, 'ok', false),
-      makeNudgeRow('2026-04-22T10:00:00.000Z', 'deepseek-v4-flash:cloud', 4000, 400, 'ok', false),
+      makeNudgeRow('2026-04-22T10:00:00.000Z', 'deepseek-v4-flash', 4000, 400, 'ok', false),
     ];
     const { deps } = makeDeps(rows);
     const ctx = makeCtx();
@@ -219,7 +220,7 @@ describe('handleNagCost — days=7 per-day table (DeepSeek + Haiku rows)', () =>
     // Should be a code block
     expect(reply).toContain('```');
     // Should contain deepseek and haiku
-    expect(reply).toContain('deepseek-v4-flash:cloud');
+    expect(reply).toContain('deepseek-v4-flash');
     expect(reply).toContain('claude-haiku-4-5');
     // Should contain the "Prices as of" date
     expect(reply).toContain(TOKEN_COSTS_USD_PER_MTOK_AS_OF);
@@ -231,7 +232,7 @@ describe('handleNagCost — days=7 per-day table (DeepSeek + Haiku rows)', () =>
 
   it('shows total nudge count in output', async () => {
     const rows = [
-      makeNudgeRow('2026-04-23T10:00:00.000Z', 'deepseek-v4-flash:cloud', 5000, 500, 'ok'),
+      makeNudgeRow('2026-04-23T10:00:00.000Z', 'deepseek-v4-flash', 5000, 500, 'ok'),
       makeNudgeRow('2026-04-23T11:00:00.000Z', 'claude-haiku-4-5', 1000, 500, 'ok'),
     ];
     const { deps } = makeDeps(rows);
@@ -246,7 +247,7 @@ describe('handleNagCost — days=30 summary view (> 14 days)', () => {
   it('renders summary (no per-day breakdown) with "Prices as of" line', async () => {
     const rows = [
       makeNudgeRow('2026-04-01T10:00:00.000Z', 'claude-haiku-4-5', 2000, 1000, 'ok'),
-      makeNudgeRow('2026-03-20T10:00:00.000Z', 'deepseek-v4-flash:cloud', 5000, 500, 'ok'),
+      makeNudgeRow('2026-03-20T10:00:00.000Z', 'deepseek-v4-flash', 5000, 500, 'ok'),
     ];
     const { deps } = makeDeps(rows);
     const ctx = makeCtx();

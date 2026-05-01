@@ -29,35 +29,39 @@ beforeEach(() => {
 // classifyTask
 // ---------------------------------------------------------------------------
 
+// v1.22.21 — :cloud suffix dropped from canonical model names. Ollama Cloud's
+// real names have no :cloud suffix; the prior convention silently 404'd
+// every Ollama call and silently fell back to Claude. Tests below assert
+// the post-v1.22.21 names returned by the classifier.
 describe('classifyTask — keyword routing', () => {
-  it('routes security/review/audit keywords to minimax-m2.7:cloud', () => {
-    expect(classifyTask('please review this code for security issues').model).toBe('minimax-m2.7:cloud');
-    expect(classifyTask('run a security audit').model).toBe('minimax-m2.7:cloud');
-    expect(classifyTask('audit the system for vulnerabilities').model).toBe('minimax-m2.7:cloud');
+  it('routes security/review/audit keywords to minimax-m2.7', () => {
+    expect(classifyTask('please review this code for security issues').model).toBe('minimax-m2.7');
+    expect(classifyTask('run a security audit').model).toBe('minimax-m2.7');
+    expect(classifyTask('audit the system for vulnerabilities').model).toBe('minimax-m2.7');
   });
 
-  it('routes architect/design/plan keywords to nemotron-3-super:cloud', () => {
-    expect(classifyTask('architect a new system').model).toBe('nemotron-3-super:cloud');
-    expect(classifyTask('design the database schema').model).toBe('nemotron-3-super:cloud');
-    expect(classifyTask('help me plan the architecture').model).toBe('nemotron-3-super:cloud');
+  it('routes architect/design/plan keywords to nemotron-3-super', () => {
+    expect(classifyTask('architect a new system').model).toBe('nemotron-3-super');
+    expect(classifyTask('design the database schema').model).toBe('nemotron-3-super');
+    expect(classifyTask('help me plan the architecture').model).toBe('nemotron-3-super');
   });
 
-  it('routes search/research/docs keywords to gemma4:cloud', () => {
-    expect(classifyTask('search for docs about Express').model).toBe('gemma4:cloud');
-    expect(classifyTask('research the best approach').model).toBe('gemma4:cloud');
-    expect(classifyTask('find documentation for this library').model).toBe('gemma4:cloud');
+  it('routes search/research/docs keywords to gemma4:31b', () => {
+    expect(classifyTask('search for docs about Express').model).toBe('gemma4:31b');
+    expect(classifyTask('research the best approach').model).toBe('gemma4:31b');
+    expect(classifyTask('find documentation for this library').model).toBe('gemma4:31b');
   });
 
-  it('routes code/build/implement/fix keywords to glm-5.1:cloud', () => {
-    expect(classifyTask('implement the login feature').model).toBe('glm-5.1:cloud');
-    expect(classifyTask('fix the bug in line 42').model).toBe('glm-5.1:cloud');
-    expect(classifyTask('build the new API endpoint').model).toBe('glm-5.1:cloud');
-    expect(classifyTask('write code for this function').model).toBe('glm-5.1:cloud');
+  it('routes code/build/implement/fix keywords to glm-5.1', () => {
+    expect(classifyTask('implement the login feature').model).toBe('glm-5.1');
+    expect(classifyTask('fix the bug in line 42').model).toBe('glm-5.1');
+    expect(classifyTask('build the new API endpoint').model).toBe('glm-5.1');
+    expect(classifyTask('write code for this function').model).toBe('glm-5.1');
   });
 
-  it('defaults to gemma4:cloud for unmatched input', () => {
+  it('defaults to gemma4:31b for unmatched input', () => {
     const result = classifyTask('Hello, how are you?');
-    expect(result.model).toBe('gemma4:cloud');
+    expect(result.model).toBe('gemma4:31b');
     expect(result.provider).toBe('ollama-cloud');
     expect(result.reason).toBe('default');
   });
@@ -65,7 +69,7 @@ describe('classifyTask — keyword routing', () => {
   it('uses first matching keyword family (security has priority over code)', () => {
     // "review" matches security, even if "code" also appears
     const result = classifyTask('review this code for security');
-    expect(result.model).toBe('minimax-m2.7:cloud');
+    expect(result.model).toBe('minimax-m2.7');
   });
 });
 
@@ -78,7 +82,7 @@ describe('routeTask — routing precedence', () => {
     const { cfg, mem } = setup();
     const session = mem.sessions.getOrCreate(1001);
     const decision = routeTask('implement a new feature', session.id, cfg, mem);
-    expect(decision.model).toBe('glm-5.1:cloud');
+    expect(decision.model).toBe('glm-5.1');
     expect(decision.reason).toContain('keyword');
     cleanupTmpRoot(cfg);
   });
@@ -127,7 +131,7 @@ describe('routeTask — routing precedence', () => {
     mem.sessionModelState.clearOverride(session.id);
     const decision = routeTask('implement a feature', session.id, cfg, mem);
     // After clearing pin, keyword routing takes over
-    expect(decision.model).toBe('glm-5.1:cloud');
+    expect(decision.model).toBe('glm-5.1');
     cleanupTmpRoot(cfg);
   });
 });

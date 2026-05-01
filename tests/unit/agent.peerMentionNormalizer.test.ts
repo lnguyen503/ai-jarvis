@@ -65,13 +65,15 @@ describe('normalizePeerBotMentions — leaves unrelated @-mentions alone', () =>
     expect(normalizePeerBotMentions(input)).toBe(expected);
   });
 
-  it('skips bots without deployed Telegram usernames', () => {
-    // ai-natasha and ai-bruce have BOT_TELEGRAM_USERNAMES = ''. Their
-    // aliases match in the lookup ONLY if a canonical exists. Since it
-    // doesn't, the @-handle stays as-is. (When BotFather names land,
-    // update BOT_TELEGRAM_USERNAMES and these become normalizable.)
-    const input = '@natasha please look into this';
-    expect(normalizePeerBotMentions(input)).toBe('@natasha please look into this');
+  it('rewrites Natasha + Bruce variants once their usernames are deployed', () => {
+    // v1.22.15 — BOT_TELEGRAM_USERNAMES populated for ai-natasha + ai-bruce.
+    // The earlier "skipped because no username" case no longer exists since
+    // every BotName now has a canonical handle. This test pins the new
+    // behavior so a future username flip doesn't regress silently.
+    expect(normalizePeerBotMentions('@natasha please look into this'))
+      .toBe('@your_natasha_bot please look into this');
+    expect(normalizePeerBotMentions('@bruce on the analysis'))
+      .toBe('@your_bruce_bot on the analysis');
   });
 
   it('returns empty string unchanged', () => {
